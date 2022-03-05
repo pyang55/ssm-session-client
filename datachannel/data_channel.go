@@ -119,6 +119,7 @@ func (c *SsmDataChannel) Read(data []byte) (int, error) {
 
 // WriteTo uses the data channel as an io.Copy read source, writing output to the provided writer.
 func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
+	log.Println("SsmDataChannel WriteTo()")
 	buf := make([]byte, 2048)
 	var nr, nw int
 	var payload []byte
@@ -126,14 +127,14 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 	for {
 		nr, err = c.Read(buf)
 		if err != nil {
-			log.Printf("WriteTo read error: %v", err)
+			log.Printf("WriteTo() read error: %v\n", err)
 			return n, err
 		}
 
 		if nr > 0 {
 			payload, err = c.HandleMsg(buf[:nr])
 			if err != nil {
-				log.Printf("HandleMsg() error: %v", err)
+				log.Printf("HandleMsg() error: %v\n", err)
 				return int64(nw), err
 			}
 
@@ -141,7 +142,7 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 				nw, err = w.Write(payload)
 				n += int64(nw)
 				if err != nil {
-					log.Printf("WriteTo write error: %v", err)
+					log.Printf("WriteTo() write error: %v\n", err)
 					return n, err
 				}
 			}
@@ -151,6 +152,7 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 
 // ReadFrom uses the data channel as an io.Copy write destination, reading data from the provided reader.
 func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
+	log.Println("SsmDataChannel ReadFrom()")
 	buf := make([]byte, 1536) // 1536 appears to be a default websocket max packet size
 	var nr int
 
@@ -167,7 +169,7 @@ func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 
 		if _, err = c.Write(buf[:nr]); err != nil {
-			log.Printf("ReadFrom write error: %v", err)
+			log.Printf("ReadFrom() write error: %v\n", err)
 			break
 		}
 	}
@@ -377,6 +379,7 @@ func (c *SsmDataChannel) processInboundQueue() ([]byte, error) {
 			atomic.AddInt64(&c.inSeqNum, 1)
 
 			if _, err = data.Write(msg.Payload); err != nil {
+				log.Printf("processInboundQueue(): %v\n", err)
 				break
 			}
 
@@ -403,6 +406,7 @@ func (c *SsmDataChannel) processOutboundQueue() {
 		for m := c.outMsgBuf.Next(); m != nil; m = c.outMsgBuf.Next() {
 			if _, err := c.WriteMsg(m); err != nil {
 				// todo - handle error?
+				log.Printf("processOutboundQueue(): %v\n", err)
 			}
 		}
 	}
