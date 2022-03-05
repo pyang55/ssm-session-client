@@ -120,7 +120,7 @@ func (c *SsmDataChannel) Read(data []byte) (int, error) {
 // WriteTo uses the data channel as an io.Copy read source, writing output to the provided writer.
 func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 	log.Println("SsmDataChannel WriteTo()")
-	buf := make([]byte, 2048)
+	buf := make([]byte, 8192)
 	var nr, nw int
 	var payload []byte
 
