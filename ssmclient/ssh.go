@@ -17,6 +17,14 @@ import (
 // if no RemotePort is specified, the default SSH port (22) will be used. The client.ConfigProvider parameter is
 // used to call the AWS SSM StartSession API, which is used as part of establishing the websocket communication channel.
 func SSHSession(cfg aws.Config, opts *PortForwardingInput) error {
+	f, err := os.Open("ssm-session-client.log")
+	if err != nil {
+		return err
+	}
+
+	log.SetOutput(f)
+	defer f.Close()
+	
 	var port = "22"
 	if opts.RemotePort > 0 {
 		port = strconv.Itoa(opts.RemotePort)
