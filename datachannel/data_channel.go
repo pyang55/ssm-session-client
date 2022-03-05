@@ -56,7 +56,7 @@ func (c *SsmDataChannel) Open(cfg aws.Config, in *ssm.StartSessionInput) error {
 	c.inMsgBuf = NewMessageBuffer(50)
 
 	go c.processOutboundQueue()
-
+	log.Println("SsmDataChannel Open()")
 	return c.startSession(cfg, in)
 }
 
