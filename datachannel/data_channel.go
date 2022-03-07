@@ -153,7 +153,7 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 // ReadFrom uses the data channel as an io.Copy write destination, reading data from the provided reader.
 func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
 	log.Println("SsmDataChannel ReadFrom()")
-	buf := make([]byte, 1536) // 1536 appears to be a default websocket max packet size
+	buf := make([]byte, 8192) // 1536 appears to be a default websocket max packet size
 	var nr int
 
 	for {
