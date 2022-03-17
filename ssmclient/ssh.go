@@ -6,19 +6,19 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/mmmorris1975/ssm-session-client/datachannel"
 	"io"
-	"log"
+	// "log"
 	"os"
 	"strconv"
 )
 
-func init() {
-	f, err := os.OpenFile("ssm-session-client.log", os.O_CREATE | os.O_WRONLY | os.O_SYNC, 0666)
-	if err != nil {
-		panic(err)
-	}
+// func init() {
+// 	f, err := os.OpenFile("ssm-session-client.log", os.O_CREATE | os.O_WRONLY | os.O_SYNC, 0666)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	log.SetOutput(f)
-}
+// 	log.SetOutput(f)
+// }
 
 // SSHSession starts a specialized port forwarding session to allow SSH connectivity to the target instance over
 // the SSM session.  It listens for data from Stdin and sends output to Stdout.  Like a port forwarding session,
@@ -50,27 +50,27 @@ func SSHSession(cfg aws.Config, opts *PortForwardingInput) error {
 
 	installSignalHandler(c)
 
-	log.Print("waiting for handshake")
+	// log.Print("waiting for handshake")
 	if err := c.WaitForHandshakeComplete(); err != nil {
 		return err
 	}
-	log.Print("handshake complete")
+	// log.Print("handshake complete")
 
 	errCh := make(chan error, 5)
 	go func() {
 		if _, err := io.Copy(c, os.Stdin); err != nil {
-			log.Printf("error copying from stdin to websocket: %v", err)
+			// log.Printf("error copying from stdin to websocket: %v", err)
 			errCh <- err
 		}
-		log.Print("copy from stdin to websocket finished")
+		// log.Print("copy from stdin to websocket finished")
 	}()
 
 	if _, err := io.Copy(os.Stdout, c); err != nil {
 		if !errors.Is(err, io.EOF) {
-			log.Printf("error copying from websocket to stdout: %v", err)
+			// log.Printf("error copying from websocket to stdout: %v", err)
 			errCh <- err
 		}
-		log.Print("EOF received from websocket -> stdout copy")
+		// log.Print("EOF received from websocket -> stdout copy")
 		close(errCh)
 	}
 
