@@ -134,7 +134,7 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 		if nr > 0 {
 			payload, err = c.HandleMsg(buf[:nr])
 			if err != nil {
-				log.Printf("WriteTo HandleMsg error: %v", err)
+				log.Printf("WriteTo() HandleMsg error: %v", err)
 				return int64(nw), err
 			}
 
@@ -164,7 +164,7 @@ func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
 				// the contract of ReaderFrom states that io.EOF should not be returned, just
 				// exit the loop and return no error to indicate we are done
 				err = nil
-				log.Print("ReadFrom reader is closed")
+				log.Print("ReadFrom() EOF, reader is closed")
 			}
 			break
 		}
@@ -174,6 +174,7 @@ func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
 			break
 		}
 	}
+	log.Println("SsmDataChannel ReadFrom() finished")
 	return
 }
 
