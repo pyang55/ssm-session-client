@@ -186,7 +186,7 @@ func (c *SsmDataChannel) Write(payload []byte) (int, error) {
 	msg.PayloadType = Output
 	msg.Payload = payload
 	msg.SequenceNumber = atomic.AddInt64(&c.seqNum, 1)
-
+	log.Printf("(W) msg=%s flags=%v type=%v seq=%d len=%d", msg.MessageType, msg.Flags, msg.PayloadType, msg.SequenceNumber, len(msg.Payload))
 	return c.WriteMsg(msg)
 }
 
@@ -295,7 +295,7 @@ func (c *SsmDataChannel) HandleMsg(data []byte) ([]byte, error) {
 		// todo - handle this better (retry?)
 		return nil, err
 	}
-
+	log.Printf("(R) msg=%s flags=%v type=%v seq=%d len=%d", m.MessageType, m.Flags, m.PayloadType, m.SequenceNumber, len(m.Payload))
 	return c.processInboundQueue()
 }
 
