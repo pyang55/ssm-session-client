@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	// "log"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -56,7 +56,7 @@ func (c *SsmDataChannel) Open(cfg aws.Config, in *ssm.StartSessionInput) error {
 	c.inMsgBuf = NewMessageBuffer(100)
 
 	go c.processOutboundQueue()
-	log.Println("SsmDataChannel Open()")
+	// log.Println("SsmDataChannel Open()")
 	return c.startSession(cfg, in)
 }
 
@@ -119,7 +119,7 @@ func (c *SsmDataChannel) Read(data []byte) (int, error) {
 
 // WriteTo uses the data channel as an io.Copy read source, writing output to the provided writer.
 func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
-	log.Println("SsmDataChannel WriteTo()")
+	// log.Println("SsmDataChannel WriteTo()")
 	buf := make([]byte, 8192)
 	var nr, nw int
 	var payload []byte
@@ -127,14 +127,14 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 	for {
 		nr, err = c.Read(buf)
 		if err != nil {
-			log.Printf("WriteTo() read error: %v\n", err)
+			// log.Printf("WriteTo() read error: %v\n", err)
 			return n, err
 		}
 
 		if nr > 0 {
 			payload, err = c.HandleMsg(buf[:nr])
 			if err != nil {
-				log.Printf("WriteTo() HandleMsg error: %v", err)
+				// log.Printf("WriteTo() HandleMsg error: %v", err)
 				return int64(nw), err
 			}
 
@@ -142,7 +142,7 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 				nw, err = w.Write(payload)
 				n += int64(nw)
 				if err != nil {
-					log.Printf("WriteTo() write error: %v\n", err)
+					// log.Printf("WriteTo() write error: %v\n", err)
 					return n, err
 				}
 			}
@@ -152,7 +152,7 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 
 // ReadFrom uses the data channel as an io.Copy write destination, reading data from the provided reader.
 func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
-	log.Println("SsmDataChannel ReadFrom()")
+	// log.Println("SsmDataChannel ReadFrom()")
 	buf := make([]byte, 8192) // 1536 appears to be a default websocket max packet size
 	var nr int
 
@@ -164,17 +164,17 @@ func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
 				// the contract of ReaderFrom states that io.EOF should not be returned, just
 				// exit the loop and return no error to indicate we are done
 				err = nil
-				log.Print("ReadFrom() EOF, reader is closed")
+				// log.Print("ReadFrom() EOF, reader is closed")
 			}
 			break
 		}
 
 		if _, err = c.Write(buf[:nr]); err != nil {
-			log.Printf("ReadFrom() write error: %v\n", err)
+			// log.Printf("ReadFrom() write error: %v\n", err)
 			break
 		}
 	}
-	log.Println("SsmDataChannel ReadFrom() finished")
+	// log.Println("SsmDataChannel ReadFrom() finished")
 	return
 }
 
@@ -186,7 +186,7 @@ func (c *SsmDataChannel) Write(payload []byte) (int, error) {
 	msg.PayloadType = Output
 	msg.Payload = payload
 	msg.SequenceNumber = atomic.AddInt64(&c.seqNum, 1)
-	log.Printf("(W) msg=%s flags=%v type=%v seq=%d len=%d", msg.MessageType, msg.Flags, msg.PayloadType, msg.SequenceNumber, len(msg.Payload))
+	// log.Printf("(W) msg=%s flags=%v type=%v seq=%d len=%d", msg.MessageType, msg.Flags, msg.PayloadType, msg.SequenceNumber, len(msg.Payload))
 	return c.WriteMsg(msg)
 }
 
@@ -295,7 +295,7 @@ func (c *SsmDataChannel) HandleMsg(data []byte) ([]byte, error) {
 		// todo - handle this better (retry?)
 		return nil, err
 	}
-	log.Printf("(R) msg=%s flags=%v type=%v seq=%d len=%d", m.MessageType, m.Flags, m.PayloadType, m.SequenceNumber, len(m.Payload))
+	// log.Printf("(R) msg=%s flags=%v type=%v seq=%d len=%d", m.MessageType, m.Flags, m.PayloadType, m.SequenceNumber, len(m.Payload))
 	return c.processInboundQueue()
 }
 
@@ -381,7 +381,7 @@ func (c *SsmDataChannel) processInboundQueue() ([]byte, error) {
 			atomic.AddInt64(&c.inSeqNum, 1)
 
 			if _, err = data.Write(msg.Payload); err != nil {
-				log.Printf("processInboundQueue(): %v\n", err)
+				// log.Printf("processInboundQueue(): %v\n", err)
 				break
 			}
 
@@ -408,7 +408,7 @@ func (c *SsmDataChannel) processOutboundQueue() {
 		for m := c.outMsgBuf.Next(); m != nil; m = c.outMsgBuf.Next() {
 			if _, err := c.WriteMsg(m); err != nil {
 				// todo - handle error?
-				log.Printf("processOutboundQueue(): %v\n", err)
+				// log.Printf("processOutboundQueue(): %v\n", err)
 			}
 		}
 	}
