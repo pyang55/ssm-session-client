@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	f, err := os.OpenFile("ssm-session-client.log", os.O_CREATE | os.O_WRONLY, 0666)
+	f, err := os.OpenFile("ssm-session-client.log", os.O_CREATE | os.O_WRONLY | os.O_SYNC, 0666)
 	if err != nil {
 		panic(err)
 	}
