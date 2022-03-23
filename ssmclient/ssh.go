@@ -59,18 +59,13 @@ func SSHSession(cfg aws.Config, opts *PortForwardingInput) error {
 	}
 	// log.Print("handshake complete")
 
-	oldStdin, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		return err
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		return errors.New("STDIN is terminal")
 	}
-	oldStdout, err := term.MakeRaw(int(os.Stdout.Fd()))
-	if err != nil {
-		return err
+
+	if term.IsTerminal(int(os.Stdout.Fd())) {
+		return errors.New("STDOUT is terminal")
 	}
-	defer func() {
-		term.Restore(int(os.Stdin.Fd()), oldStdin)
-		term.Restore(int(os.Stdout.Fd()), oldStdout)
-	}()
 
 	errCh := make(chan error, 5)
 	go func() {
