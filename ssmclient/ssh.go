@@ -2,10 +2,13 @@ package ssmclient
 
 import (
 	"errors"
+	"io"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/mmmorris1975/ssm-session-client/datachannel"
-	"io"
+	"golang.org/x/term"
+
 	// "log"
 	"os"
 	"strconv"
@@ -55,6 +58,14 @@ func SSHSession(cfg aws.Config, opts *PortForwardingInput) error {
 		return err
 	}
 	// log.Print("handshake complete")
+
+	var oldStdin, oldStdout *term.State
+	oldStdin, _ = term.MakeRaw(int(os.Stdin.Fd()))
+	oldStdout, _ = term.MakeRaw(int(os.Stdout.Fd()))
+	defer func() {
+		term.Restore(int(os.Stdin.Fd()), oldStdin)
+		term.Restore(int(os.Stdout.Fd()), oldStdout)
+	}()
 
 	errCh := make(chan error, 5)
 	go func() {
