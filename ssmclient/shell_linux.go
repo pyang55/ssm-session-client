@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package ssmclient
@@ -7,17 +8,14 @@ import (
 	"os"
 )
 
-func cleanup() error {
-	if origTermios != nil {
-		// reset Stdin to original settings
-		return unix.IoctlSetTermios(int(os.Stdin.Fd()), unix.TCSETSF, origTermios)
-	}
-	return nil
-}
+const (
+	ioctlReadTermios  uint = unix.TCGETS
+	ioctlWriteTermios uint = unix.TCSETSF
+)
 
-// see also: https://godoc.org/golang.org/x/crypto/ssh/terminal#MakeRaw.
+// see also: https://pkg.go.dev/golang.org/x/term?utm_source=godoc#MakeRaw.
 func configureStdin() (err error) {
-	origTermios, err = unix.IoctlGetTermios(int(os.Stdin.Fd()), unix.TCGETS)
+	origTermios, err = unix.IoctlGetTermios(int(os.Stdin.Fd()), ioctlReadTermios)
 	if err != nil {
 		return err
 	}
@@ -29,5 +27,5 @@ func configureStdin() (err error) {
 	newTermios.Iflag = origTermios.Iflag | unix.IUTF8
 	newTermios.Lflag = origTermios.Lflag ^ unix.ICANON ^ unix.ECHO ^ unix.ISIG
 
-	return unix.IoctlSetTermios(int(os.Stdin.Fd()), unix.TCSETSF, &newTermios)
+	return unix.IoctlSetTermios(int(os.Stdin.Fd()), ioctlWriteTermios, &newTermios)
 }

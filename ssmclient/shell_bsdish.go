@@ -1,3 +1,4 @@
+//go:build darwin || netbsd || freebsd || openbsd || dragonfly
 // +build darwin netbsd freebsd openbsd dragonfly
 
 package ssmclient
@@ -7,17 +8,14 @@ import (
 	"os"
 )
 
-func cleanup() error {
-	if origTermios != nil {
-		// reset Stdin to original settings
-		return unix.IoctlSetTermios(int(os.Stdin.Fd()), unix.TIOCSETAF, origTermios)
-	}
-	return nil
-}
+const (
+	ioctlReadTermios  uint = unix.TIOCGETA
+	ioctlWriteTermios uint = unix.TIOCSETAF
+)
 
-// see also: https://godoc.org/golang.org/x/crypto/ssh/terminal#MakeRaw.
+// see also: https://pkg.go.dev/golang.org/x/term?utm_source=godoc#MakeRaw.
 func configureStdin() (err error) {
-	origTermios, err = unix.IoctlGetTermios(int(os.Stdin.Fd()), unix.TIOCGETA)
+	origTermios, err = unix.IoctlGetTermios(int(os.Stdin.Fd()), ioctlReadTermios)
 	if err != nil {
 		return err
 	}
@@ -28,5 +26,5 @@ func configureStdin() (err error) {
 	newTermios := *origTermios
 	newTermios.Lflag = origTermios.Lflag ^ unix.ICANON ^ unix.ECHO ^ unix.ISIG
 
-	return unix.IoctlSetTermios(int(os.Stdin.Fd()), unix.TIOCSETAF, &newTermios)
+	return unix.IoctlSetTermios(int(os.Stdin.Fd()), ioctlWriteTermios, &newTermios)
 }

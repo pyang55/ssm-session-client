@@ -74,3 +74,11 @@ func handleTerminalResize(c datachannel.DataChannel) {
 		}
 	}()
 }
+
+func cleanup() error {
+	if origTermios != nil {
+		// reset Stdin to original settings
+		return unix.IoctlSetTermios(int(os.Stdin.Fd()), ioctlWriteTermios, origTermios)
+	}
+	return nil
+}
