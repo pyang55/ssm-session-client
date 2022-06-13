@@ -1,10 +1,6 @@
 package ssmclient
 
 import (
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/ssm"
-	"github.com/mmmorris1975/ssm-session-client/datachannel"
-	"golang.org/x/net/netutil"
 	"io"
 	"log"
 	"net"
@@ -12,6 +8,11 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/mmmorris1975/ssm-session-client/datachannel"
+	"golang.org/x/net/netutil"
 )
 
 // PortForwardingInput configures the port forwarding session parameters.
@@ -22,6 +23,7 @@ type PortForwardingInput struct {
 	Target     string
 	RemotePort int
 	LocalPort  int
+	Host       string
 }
 
 // PortForwardingSession starts a port forwarding session using the PortForwardingInput parameters to
@@ -116,11 +118,117 @@ outer:
 	return nil
 }
 
+func PortForwardingSessionRDS(cfg aws.Config, opts *PortForwardingInput) error {
+	c, err := openDataChannelRDS(cfg, opts)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		// Both the basic and muxing plugins support TerminateSession on the agent side.
+		_ = c.TerminateSession()
+		_ = c.Close()
+	}()
+
+	// use a signal handler vs. defer since defer operates after an escape from the outer loop
+	// and we can't trust the data channel connection state at that point.  Intercepting signals
+	// means we're probably trying to shutdown somewhere in the outer loop, and there's a good
+	// possibility that the data channel is still valid
+	installSignalHandler(c)
+
+	if err = c.WaitForHandshakeComplete(); err != nil {
+		return err
+	}
+
+	lsnr, err := createListener(opts.LocalPort)
+	if err != nil {
+		return err
+	}
+	defer lsnr.Close()
+	log.Printf("listening on %s", lsnr.Addr())
+
+	doneCh := make(chan bool)
+	errCh := make(chan error)
+	inCh := messageChannel(c, errCh)
+
+outer:
+	for {
+		var conn net.Conn
+		conn, err = lsnr.Accept()
+		if err != nil {
+			// not fatal, just wait for next (maybe unless lsnr is dead?)
+			log.Print(err)
+			continue
+		}
+
+		go func() {
+			// handle incoming messages from AWS in the background
+			if _, e := io.Copy(c, conn); e != nil {
+				errCh <- e
+			}
+			doneCh <- true
+		}()
+
+	inner:
+		for {
+			select {
+			case <-doneCh:
+				// basic (non-muxing) connections support DisconnectPort to signal to the remote agent that
+				// we are shutting down this particular connection on our end, and possibly expect a new one.
+				_ = c.DisconnectPort()
+				break inner
+			case data, ok := <-inCh:
+				if !ok {
+					// incoming websocket channel is closed, which is fatal
+					_ = conn.Close()
+					break outer
+				}
+
+				if _, err = conn.Write(data); err != nil {
+					log.Print(err)
+				}
+			case er, ok := <-errCh:
+				if !ok {
+					// I can't think of a good reason why we'd ever end up here, but if we do
+					// we should stop the world
+					log.Print("errCh closed")
+					_ = conn.Close()
+					break outer
+				}
+
+				// any write to errCh means at least 1 of the goroutines has exited
+				log.Print(er)
+				break inner
+			}
+		}
+
+		_ = conn.Close()
+	}
+	return nil
+}
+
 func openDataChannel(cfg aws.Config, opts *PortForwardingInput) (*datachannel.SsmDataChannel, error) {
 	in := &ssm.StartSessionInput{
 		DocumentName: aws.String("AWS-StartPortForwardingSession"),
 		Target:       aws.String(opts.Target),
 		Parameters: map[string][]string{
+			"localPortNumber": {strconv.Itoa(opts.LocalPort)},
+			"portNumber":      {strconv.Itoa(opts.RemotePort)},
+		},
+	}
+
+	c := new(datachannel.SsmDataChannel)
+	if err := c.Open(cfg, in); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func openDataChannelRDS(cfg aws.Config, opts *PortForwardingInput) (*datachannel.SsmDataChannel, error) {
+	in := &ssm.StartSessionInput{
+		DocumentName: aws.String("AWS-StartPortForwardingSession"),
+		Target:       aws.String(opts.Target),
+		Parameters: map[string][]string{
+			"host":            {opts.Host},
 			"localPortNumber": {strconv.Itoa(opts.LocalPort)},
 			"portNumber":      {strconv.Itoa(opts.RemotePort)},
 		},
