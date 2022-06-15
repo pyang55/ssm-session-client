@@ -225,7 +225,7 @@ func openDataChannel(cfg aws.Config, opts *PortForwardingInput) (*datachannel.Ss
 
 func openDataChannelRDS(cfg aws.Config, opts *PortForwardingInput) (*datachannel.SsmDataChannel, error) {
 	in := &ssm.StartSessionInput{
-		DocumentName: aws.String("AWS-StartPortForwardingSession"),
+		DocumentName: aws.String("AWS-StartPortForwardingSessionToRemoteHost"),
 		Target:       aws.String(opts.Target),
 		Parameters: map[string][]string{
 			"host":            {opts.Host},
