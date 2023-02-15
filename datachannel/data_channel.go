@@ -148,7 +148,6 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 				nw, err = w.Write(payload)
 				n += int64(nw)
 				if err != nil {
-					log.Printf("WriteTo write error: %v", err)
 					return n, err
 				}
 			}
