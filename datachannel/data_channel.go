@@ -134,12 +134,14 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 			payload, err = c.HandleMsg(buf[:nr])
 			var isEOF bool
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					isEOF = true
-				} else {
-					log.Printf("WriteTo HandleMsg error: %v", err)
-					return n, err
-				}
+				log.Printf("WriteTo HandleMsg error: %v", err)
+				return int64(nw), err
+				// if errors.Is(err, io.EOF) {
+				// 	isEOF = true
+				// } else {
+				// 	log.Printf("WriteTo HandleMsg error: %v", err)
+				// 	return n, err
+				// }
 			}
 
 			if len(payload) > 0 {
@@ -151,9 +153,9 @@ func (c *SsmDataChannel) WriteTo(w io.Writer) (n int64, err error) {
 				}
 			}
 
-			if isEOF {
-				return n, nil
-			}
+			// if isEOF {
+			// 	return n, nil
+			// }
 		}
 	}
 }
@@ -175,10 +177,8 @@ func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
 			}
 			break
 		}
-		x, err := c.Write(buf[:nr])
-		fmt.Println(x)
-		if err != nil {
-			log.Println(err)
+
+		if _, err = c.Write(buf[:nr]); err != nil {
 			log.Printf("ReadFrom write error: %v", err)
 			break
 		}
