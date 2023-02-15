@@ -175,12 +175,13 @@ func (c *SsmDataChannel) ReadFrom(r io.Reader) (n int64, err error) {
 			}
 			break
 		}
-		log.Printf("exiting")
-		break
-		// if _, err = c.Write(buf[:nr]); err != nil {
-		// 	log.Printf("ReadFrom write error: %v", err)
-		// 	break
-		// }
+		x, err := c.Write(buf[:nr])
+		fmt.Println(x)
+		if err != nil {
+			log.Println(err)
+			log.Printf("ReadFrom write error: %v", err)
+			break
+		}
 	}
 	return
 }
